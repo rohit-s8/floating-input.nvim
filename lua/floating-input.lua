@@ -17,6 +17,11 @@ function M.under_cursor(_)
 end
 
 function M.input(opts, on_confirm, win_config)
+  vim.validate {
+    opts = { opts, "table" },
+    on_confirm = { on_confirm, "function" }
+  }
+
   local prompt = opts.prompt or "Input: "
   local default = opts.default or ""
 
@@ -53,19 +58,21 @@ function M.input(opts, on_confirm, win_config)
   vim.cmd('startinsert')
   vim.api.nvim_win_set_cursor(window, { 1, vim.str_utfindex(default) + 1 })
 
+  local function close_window(input)
+    on_confirm(input)
+    vim.api.nvim_win_close(window, true)
+  end
+
   -- Enter to confirm
   vim.keymap.set({ 'n', 'i', 'v' }, '<cr>', function()
     local lines = vim.api.nvim_buf_get_lines(buffer, 0, 1, false)
-    if on_confirm then
-      on_confirm(lines[1])
-    end
-    vim.api.nvim_win_close(window, true)
+    close_window(lines[1])
     vim.cmd('stopinsert')
   end, { buffer = buffer })
 
   -- Esc or q to close
-  vim.keymap.set("n", "<esc>", function() vim.api.nvim_win_close(window, true) end, { buffer = buffer })
-  vim.keymap.set("n", "q", function() vim.api.nvim_win_close(window, true) end, { buffer = buffer })
+  vim.keymap.set("n", "<esc>", close_window, { buffer = buffer })
+  vim.keymap.set("n", "q", close_window, { buffer = buffer })
 end
 
 -- Deprecated. No need to call setup, will be removed soon.
